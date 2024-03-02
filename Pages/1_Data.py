@@ -25,7 +25,6 @@ def initialize_connection():
 
 conn = initialize_connection()
 
-
 @st.cache_data()
 def query_database(query):
     with conn.cursor() as cur:
@@ -117,4 +116,3 @@ if __name__ == "__main__":
         st.dataframe(target_data)
 
     st.write(st.session_state)
-

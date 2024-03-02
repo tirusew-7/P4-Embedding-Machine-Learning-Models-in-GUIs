@@ -1,4 +1,3 @@
-# Imporing
 import streamlit as st
 import pandas as pd
 import pyodbc
@@ -7,12 +6,12 @@ import os
 
 @st.cache_resource
 def connect_to_database():
-    secrets_path = os.path.join(os.getcwd(), '.streamlit', 'secrets.toml')
+    secrets_path = os.path.join(os.path.dirname(__file__), '..', '.streamlit', 'secrets.toml')
+    try:
+        secrets = toml.load(secrets_path)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Error: secrets.toml file not found at {secrets_path}")
 
-    if not os.path.exists(secrets_path):
-        return None
-
-    secrets = toml.load(secrets_path)
     server = secrets['database']['server']
     database = secrets['database']['database']
     username = secrets['database']['username']
@@ -23,7 +22,7 @@ def connect_to_database():
 def list_tables():
     connection = connect_to_database()
     if connection is None:
-        st.error("Error: secrets.toml file not found.")
+        st.error("Error: Unable to connect to the database.")
         st.stop()
 
     cursor = connection.cursor()
@@ -32,7 +31,7 @@ def list_tables():
     tables = cursor.fetchall()
     st.write("Tables in the database:")
     st.write([table[0] for table in tables])
-# list_tables()
+
 def read_data(query):
     connection = connect_to_database()
     if connection is None:
@@ -44,3 +43,5 @@ def read_data(query):
     columns = [column[0] for column in cursor.description]
     data = cursor.fetchall()
     return pd.DataFrame.from_records(data, columns=columns)
+
+# Remove the direct invocation of list_tables() from the script
