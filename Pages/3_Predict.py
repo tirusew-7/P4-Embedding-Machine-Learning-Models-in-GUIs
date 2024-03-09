@@ -1,150 +1,146 @@
 import streamlit as st
-import joblib
-import numpy as np
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
-from imblearn.over_sampling import RandomOverSampler
+import joblib
+from PIL import Image
+import os
 
-# Define numerical and categorical columns
-numerical_cols = ['tenure', 'MonthlyCharges', 'TotalCharges']
-categorical_cols = ['gender', 'SeniorCitizen', 'Partner', 'Dependents', 'PhoneService', 'MultipleLines',
-                     'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport',
-                     'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod']
+st.set_page_config(
+    page_title='Churn Prediction',
+    page_icon=':',
+    layout='wide'
+)
 
-def make_pipeline(model):
-    numerical_transformer = SimpleImputer(strategy='mean')  # Impute missing numerical values
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='most_frequent')),  # Impute missing categorical values
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-    ])
+def show():
+    st.title("Predict Page")
+    # Your predict page content goes here
+    st.write("This is the Predict Page content.")
 
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numerical_transformer, numerical_cols),
-            ('cat', categorical_transformer, categorical_cols)
-        ])
 
-    return Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
+# Loading logistic regression model
+@st.cache_data(show_spinner='Logistic Regression Model Loading')
+def logistic_regression_pipeline():
+    model = joblib.load('./models/logistic_regression_pipeline.pkl')
+    return model
+ 
+# Loading random forest model
+@st.cache_data(show_spinner='Random Forest Model Loading')
+def random_forest_pipeline():
+    model = joblib.load('./models/random_forest_pipeline.pkl')
+    return model
+ 
+# Loading encoder
+@st.cache_resource(show_spinner='encoder Loading')
+def load_encoder():
+    encoder = joblib.load('./models/label_encoder.pkl')
+    return encoder
 
-@st.cache_resource(show_spinner='Forest Model Loading')
-def load_forest_model():
-    pipeline = joblib.load('models/RForest_model.joblib')
-    return pipeline
-
-@st.cache_resource(show_spinner='Regression Model Loading')
-def load_regression_pipeline():
-    pipeline = joblib.load('models/LRegression_model.joblib')
-    return pipeline
-
+# Selecting among the loaded Models
 def select_model():
     col1, col2 = st.columns(2)
-
     with col1:
-        st.selectbox("Select Model", options=['Random Forest Model', 'Regression Model'], key='selected_model')
-    
+        model_name = st.selectbox('Select a Model', options=['Logistic Regression', 'Random Forest'])
+        if model_name == 'Logistic Regression':
+            model = logistic_regression_pipeline()  
+        elif model_name == 'Random Forest':
+            model = random_forest_pipeline()
+        encoder = load_encoder()
     with col2:
         pass
+    return model, encoder
 
-    if st.session_state['selected_model'] == 'Random Forest Model':
-        pipeline = load_forest_model()  # Load Random Forest model
+#Making Prediction based on the loaded models and the loaded encoder
+def make_prediction(model, encoder):
+    df = st.session_state['df']
+    prediction = model.predict(df)
+    probability = model.predict_proba(df)[:, 1].item()
+    st.session_state['prediction'] = prediction
+    st.session_state['probability'] = probability
+
+    # Update history with user inputs and prediction, including timestamp
+    if "history" not in st.session_state:
+        st.session_state["history"] = []
+    from datetime import datetime  # Import datetime library
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Get current timestamp
+    new_entry = {
+        "inputs": dict(df),
+        "prediction": prediction[0],
+        "probability": probability,
+        "timestamp": current_time  # Add timestamp key with current time
+    }
+    st.session_state["history"].append(new_entry)
+    return prediction
+
+def predict_proba():
+    probability = st.session_state.get('probability', None)
+    if probability is not None:
+        st.write(f"The probability of churn is: {probability:.2%}")
+
+def predict():
+    if 'prediction' not in st.session_state:
+        st.session_state['prediction'] = None
+    if 'probability' not in st.session_state:
+        st.session_state['probability'] = None  # Initialize probability key
+    model, encoder = select_model()
+    with st.form('input feature'):
+        col1, col2 = st.columns(2)
+        with col1:
+            # Add input fields and store values in input_features dictionary
+            st.markdown('##### Demographic Features')
+            gender = st.selectbox('gender', options=['Male', 'Female'], key='gender')
+            SeniorCitizen = st.selectbox('SeniorCitizen', options=['Yes', 'No'], key='SeniorCitizen')
+            Partner = st.selectbox('Partner', options=['Yes', 'No'], key='Partner')
+            Dependents = st.selectbox('Dependents', options=['Yes', 'No'], key='Dependents')
+            st.markdown('##### Service Features')
+            tenure = st.number_input('tenure', min_value=0, max_value=71, step=1, key='tenure')  
+            PhoneService = st.selectbox('PhoneService', options=['Yes', 'No'], key='PhoneService')
+            MultipleLines = st.selectbox('MultipleLines', options=['Yes', 'No'], key='MultipleLines')
+            InternetService = st.selectbox('InternetService', options=['Fiber optic', 'DSL'], key='InternetService')
+            OnlineSecurity = st.selectbox('OnlineSecurity', options=['Yes', 'No'], key='OnlineSecurity')
+        with col2:
+            OnlineBackup = st.selectbox('OnlineBackup', options=['Yes', 'No'], key='OnlineBackup')
+            DeviceProtection = st.selectbox('DeviceProtection', options=['Yes', 'No'], key='DeviceProtection')
+            TechSupport = st.selectbox('TechSupport', options=['Yes', 'No'], key='TechSupport')
+            StreamingTV = st.selectbox('StreamingTV', options=['Yes', 'No'], key='StreamingTV')
+            StreamingMovies = st.selectbox('StreamingMovies', options=['Yes', 'No'], key='StreamingMovies')  
+            st.markdown('##### Payment Features')
+            Contract = st.selectbox('Contract', options=['Month-to-month', 'Two year', 'One year'], key='Contract')
+            PaperlessBilling = st.selectbox('PaperlessBilling', options=['Yes', 'No'], key='PaperlessBilling')
+            PaymentMethod = st.selectbox('PaymentMethod', options=['Electronic check', 'Credit card (automatic)', 'Mailed check', 'Bank transfer (automatic)'], key='PaymentMethod')
+            MonthlyCharges = st.number_input('MonthlyCharges', min_value=0, key='MonthlyCharges')
+            TotalCharges = st.number_input('TotalCharges', min_value=0, key='TotalCharges')
+   
+        input_features = pd.DataFrame({
+            'gender': [gender],
+            'SeniorCitizen': [SeniorCitizen],
+            'Partner': [Partner],
+            'Dependents': [Dependents],
+            'tenure': [tenure],
+            'PhoneService': [PhoneService],
+            'MultipleLines': [MultipleLines],
+            'InternetService': [InternetService],
+            'OnlineSecurity': [OnlineSecurity],
+            'OnlineBackup': [OnlineBackup],
+            'DeviceProtection': [DeviceProtection],
+            'TechSupport': [TechSupport],
+            'StreamingTV': [StreamingTV],
+            'StreamingMovies': [StreamingMovies],
+            'Contract': [Contract],
+            'PaperlessBilling': [PaperlessBilling],
+            'PaymentMethod': [PaymentMethod],
+            'MonthlyCharges': [MonthlyCharges],
+            'TotalCharges': [TotalCharges]
+        })
+        st.session_state['df'] = input_features
+        st.form_submit_button('Predict Churn', on_click=make_prediction, kwargs=dict(model=model, encoder=encoder))
+
+# Call the data function directly
+if __name__ == '__main__':
+    st.markdown('## Vodafom Churn Prediction Page')
+    predict()
+prediction = st.session_state['prediction']
+if prediction is not None:
+    if prediction[0] == 1:
+        st.write(f"The customer will churn.")    
     else:
-        pipeline = load_regression_pipeline()  # Load Regression model
-
-    encoder = joblib.load('./models/encoder.joblib')
-
-    return pipeline, encoder
-
-def make_prediction(pipeline, encoder):
-    gender = st.session_state['gender']
-    senior_citizen = st.session_state['senior_citizen']
-    partner = st.session_state['partner']
-    dependents = st.session_state['dependents']
-    tenure = st.session_state['tenure']
-    phone_service = st.session_state['phone_service']
-    multiple_lines = st.session_state['multiple_lines']
-    internet_service = st.session_state['internet_service']
-    online_security = st.session_state['online_security']
-    online_backup = st.session_state['online_backup']
-    device_protection = st.session_state['device_protection']
-    tech_support = st.session_state['tech_support']
-    streaming_tv = st.session_state['streaming_tv']
-    streaming_movies = st.session_state['streaming_movies']
-    contract = st.session_state['contract']
-    paperless_billing = st.session_state['paperless_billing']
-    payment_method = st.session_state['payment_method']
-    monthly_charges = st.session_state['monthly_charges']
-    total_charges = st.session_state['total_charges']
-
-    columns = ['gender', 'SeniorCitizen', 'Partner', 'Dependents', 'tenure', 'PhoneService', 'MultipleLines',
-               'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport',
-               'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod',
-               'MonthlyCharges', 'TotalCharges']
-
-    data = [[gender, senior_citizen, partner, dependents, tenure, phone_service, multiple_lines, internet_service,
-             online_security, online_backup, device_protection, tech_support, streaming_tv, streaming_movies,
-             contract, paperless_billing, payment_method, monthly_charges, total_charges]]
-
-    df = pd.DataFrame(data, columns=columns)
-
-    # Make prediction using the pipeline
-    pred = pipeline.predict(df)
-    prediction = int(pred[0])
-    prediction = encoder.inverse_transform([prediction])
-
-    # Get Probabilities
-    probability = pipeline.predict_proba(df)
-
-    return prediction, probability
-
-def display_form():
-    loaded_model, encoder = select_model()
-
-    if loaded_model is not None:
-        col1, col2, col3 = st.columns(3)
-
-        with st.form("Input Feature"):
-            with col1:
-                st.write("### Demographic Features")
-                st.selectbox("Gender", key='gender', options=['Female', 'Male'])
-                st.selectbox("Senior Citizen", key='senior_citizen', options=['Yes', 'No'])
-                st.selectbox("Partner", key='partner', options=['Yes', 'No'])
-                st.selectbox("Dependents", key='dependents', options=['Yes', 'No'])
-
-            with col2:
-                st.write("### Service Features")
-                st.number_input("Tenure", key='tenure')
-                st.selectbox("Phone Service", key='phone_service', options=['Yes', 'No'])
-                st.selectbox("Multiple Lines", key='multiple_lines', options=['Yes', 'No'])
-                st.selectbox("Internet Service", key='internet_service', options=['DSL', 'Fiber optic', 'No'])
-                st.selectbox("Online Security", key='online_security', options=['Yes', 'No'])
-                st.selectbox("Online Backup", key='online_backup', options=['Yes', 'No'])
-                st.selectbox("Device Protection", key='device_protection', options=['Yes', 'No'])
-                st.selectbox("Tech Support", key='tech_support', options=['Yes', 'No'])
-                st.selectbox("Streaming TV", key='streaming_tv', options=['Yes', 'No'])
-                st.selectbox("Streaming Movies", key='streaming_movies', options=['Yes', 'No'])
-                              
-            with col3:
-                st.write("### Cost Related Features")
-                st.selectbox("Contract", key='contract', options=['Month-to-month', 'One year', 'Two year'])
-                st.selectbox("Paperless Billing", key='paperless_billing', options=['Yes', 'No'])
-                st.selectbox("Payment Method", key='payment_method', options=['Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'])
-                st.number_input("Monthly Charges", key='monthly_charges')
-                st.number_input("Total Charges", key='total_charges')
-
-            # Check for form submission outside the context manager
-            if st.form_submit_button("Predict Churn"):
-                prediction, probability = make_prediction(loaded_model, encoder)
-                st.session_state['prediction'] = prediction
-                st.session_state['probability'] = probability
-
-if __name__ == "__main__":
-    st.markdown("<h1 style='text-align: center;'>Customer Churn Prediction</h1>", unsafe_allow_html=True)
-    display_form()
-
-    if 'prediction' in st.session_state:
-        st.markdown(f"<h2 style='text-align: center;'>Predicted Churn: **{st.session_state['prediction'][0]}**</h2>", unsafe_allow_html=True)
-        st.write("Probability of Churn:", st.session_state['probability'][0][1])  # Assuming second element is churn probability
+        st.write(f"The customer will not churn.")
+    predict_proba()
