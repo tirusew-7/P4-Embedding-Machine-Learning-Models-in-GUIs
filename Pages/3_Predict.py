@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 from PIL import Image
 import os
+from datetime import datetime
 
 st.set_page_config(
     page_title='Churn Prediction',
@@ -38,7 +39,7 @@ def load_encoder():
 def select_model():
     col1, col2 = st.columns(2)
     with col1:
-        model_name = st.selectbox('Select a Model', options=['Logistic Regression', 'Random Forest'])
+        model_name = st.selectbox('Select a Model', options=['Random Forest', 'Logistic Regression'])
         if model_name == 'Logistic Regression':
             model = logistic_regression_pipeline()  
         elif model_name == 'Random Forest':
@@ -46,27 +47,20 @@ def select_model():
         encoder = load_encoder()
     with col2:
         pass
-    return model, encoder
+    return model, encoder, model_name
 
 #Making Prediction based on the loaded models and the loaded encoder
-def make_prediction(model, encoder):
+def make_prediction(model_name, model, encoder):
     df = st.session_state['df']
     prediction = model.predict(df)
     probability = model.predict_proba(df)[:, 1].item()
     st.session_state['prediction'] = prediction
     st.session_state['probability'] = probability
 
-    # Update history with user inputs and prediction, including timestamp
+   # Update history with user inputs and prediction, including timestamp
     if "history" not in st.session_state:
         st.session_state["history"] = []
-    from datetime import datetime  # Import datetime library
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Get current timestamp
-    new_entry = {
-        "inputs": dict(df),
-        "prediction": prediction[0],
-        "probability": probability,
-        "timestamp": current_time  # Add timestamp key with current time
-    }
+    new_entry = {"prediction": prediction[0], "probability": probability, "model_name": model_name}
     st.session_state["history"].append(new_entry)
     return prediction
 
@@ -80,7 +74,7 @@ def predict():
         st.session_state['prediction'] = None
     if 'probability' not in st.session_state:
         st.session_state['probability'] = None  # Initialize probability key
-    model, encoder = select_model()
+    model, encoder, model_name = select_model()
     with st.form('input feature'):
         col1, col2 = st.columns(2)
         with col1:
@@ -131,7 +125,7 @@ def predict():
             'TotalCharges': [TotalCharges]
         })
         st.session_state['df'] = input_features
-        st.form_submit_button('Predict Churn', on_click=make_prediction, kwargs=dict(model=model, encoder=encoder))
+        st.form_submit_button('Predict Churn', on_click=make_prediction, kwargs=dict(model=model, encoder=encoder, model_name=model_name))
 
 # Call the data function directly
 if __name__ == '__main__':

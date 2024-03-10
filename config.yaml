@@ -1,0 +1,7 @@
+credentials:
+  usernames:
+    Tirusew:
+      email: tirusewcheru@gmail.com
+      logged_in: False # Will be managed automatically
+      name: Tirusew
+      password: 'Chat@2024' # Make sure to enclose in quotes

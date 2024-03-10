@@ -11,6 +11,7 @@ st.set_page_config(
     page_icon='',
     layout='wide'
 )
+
 # st.title('Data from Database')
 def show():
     st.title("Dashboard Page")
