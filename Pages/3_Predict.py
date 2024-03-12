@@ -10,7 +10,7 @@ st.set_page_config(
     page_icon=':',
     layout='wide'
 )
-
+    
 def show():
     st.title("Predict Page")
     # Your predict page content goes here
@@ -50,18 +50,31 @@ def select_model():
     return model, encoder, model_name
 
 #Making Prediction based on the loaded models and the loaded encoder
+# Making Prediction based on the loaded models and the loaded encoder
 def make_prediction(model_name, model, encoder):
     df = st.session_state['df']
     prediction = model.predict(df)
     probability = model.predict_proba(df)[:, 1].item()
+
+    # Update history with user inputs and prediction, including timestamp
+    if "history" not in st.session_state:
+        st.session_state["history"] = []
+
+    # Add columns for model, date, time, prediction, and probability
+    new_entry = {
+        "Model-Chosen": model_name,
+        "Date": datetime.now().strftime("%Y-%m-%d"),
+        "Time": datetime.now().strftime("%H:%M:%S"),
+        "Prediction": 'Yes' if prediction[0] == 1 else 'No',
+        "Probability": probability,
+    }
+
+    st.session_state["history"].append(new_entry)
+
+    # Update session state with the latest prediction and probability
     st.session_state['prediction'] = prediction
     st.session_state['probability'] = probability
 
-   # Update history with user inputs and prediction, including timestamp
-    if "history" not in st.session_state:
-        st.session_state["history"] = []
-    new_entry = {"prediction": prediction[0], "probability": probability, "model_name": model_name}
-    st.session_state["history"].append(new_entry)
     return prediction
 
 def predict_proba():
@@ -102,7 +115,7 @@ def predict():
             PaymentMethod = st.selectbox('PaymentMethod', options=['Electronic check', 'Credit card (automatic)', 'Mailed check', 'Bank transfer (automatic)'], key='PaymentMethod')
             MonthlyCharges = st.number_input('MonthlyCharges', min_value=0, key='MonthlyCharges')
             TotalCharges = st.number_input('TotalCharges', min_value=0, key='TotalCharges')
-   
+
         input_features = pd.DataFrame({
             'gender': [gender],
             'SeniorCitizen': [SeniorCitizen],
@@ -124,9 +137,11 @@ def predict():
             'MonthlyCharges': [MonthlyCharges],
             'TotalCharges': [TotalCharges]
         })
-        st.session_state['df'] = input_features
-        st.form_submit_button('Predict Churn', on_click=make_prediction, kwargs=dict(model=model, encoder=encoder, model_name=model_name))
 
+        # Store input features in the session state
+        st.session_state['df'] = input_features
+
+        st.form_submit_button('Predict Churn', on_click=make_prediction, kwargs=dict(model=model, encoder=encoder, model_name=model_name))
 # Call the data function directly
 if __name__ == '__main__':
     st.markdown('## Vodafom Churn Prediction Page')
