@@ -10,7 +10,7 @@ st.set_page_config(
     page_icon=':',
     layout='wide'
 )
-    
+    a
 def show():
     st.title("Predict Page")
     # Your predict page content goes here
