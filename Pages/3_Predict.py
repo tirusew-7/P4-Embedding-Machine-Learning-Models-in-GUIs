@@ -1,140 +1,47 @@
+
 import streamlit as st
+import joblib 
+import imblearn  
 import pandas as pd
-import joblib
-from PIL import Image
-import os
-from datetime import datetime
 
-st.set_page_config(
-    page_title='Churn Prediction',
-    page_icon=':',
-    layout='wide'
-)
+model1_filename = "model1.joblib"
+model2_filename = "model2.joblib"
 
-def show():
-    st.title("Predict Page")
-    # Your predict page content goes here
-    st.write("This is the Predict Page content.")
+model = joblib.load('path_to_your_model.pkl')
 
+st.title('Customer Churn Prediction')
+st.write('Please provide the following information:')
 
-# Loading logistic regression model
-@st.cache_data(show_spinner='Logistic Regression Model Loading')
-def logistic_regression_pipeline():
-    model = joblib.load('./models/logistic_regression_pipeline.pkl')
-    return model
- 
-# Loading random forest model
-@st.cache_data(show_spinner='Random Forest Model Loading')
-def random_forest_pipeline():
-    model = joblib.load('./models/random_forest_pipeline.pkl')
-    return model
- 
-# Loading encoder
-@st.cache_resource(show_spinner='encoder Loading')
-def load_encoder():
-    encoder = joblib.load('./models/label_encoder.pkl')
-    return encoder
+tenure = st.number_input('Tenure (months)', min_value=0)
+monthly_charges = st.number_input('Monthly Charges', min_value=0.0)
+total_charges = st.number_input('Total Charges', min_value=0.0)
 
-# Selecting among the loaded Models
-def select_model():
-    col1, col2 = st.columns(2)
-    with col1:
-        model_name = st.selectbox('Select a Model', options=['Random Forest', 'Logistic Regression'])
-        if model_name == 'Logistic Regression':
-            model = logistic_regression_pipeline()  
-        elif model_name == 'Random Forest':
-            model = random_forest_pipeline()
-        encoder = load_encoder()
-    with col2:
-        pass
-    return model, encoder, model_name
+user_data = pd.DataFrame({
+    'SeniorCitizen_1': [1 if st.checkbox("Senior Citizen") else 0],
+    'Partner_Yes': [1 if st.checkbox("Partner") else 0],
+    'Dependents_Yes': [1 if st.checkbox("Dependents") else 0],
+    'PhoneService_Yes': [1 if st.checkbox("Phone Service") else 0],
+    'MultipleLines_No phone service': [0],
+    'MultipleLines_Yes': [1 if st.checkbox("Multiple Lines") else 0],
+    'InternetService_Fiber optic': [1 if st.checkbox("Fiber Optic Internet") else 0],
+    'InternetService_No': [0],
+    'OnlineSecurity_Yes': [1 if st.checkbox("Online Security") else 0],
+    'OnlineBackup_Yes': [1 if st.checkbox("Online Backup") else 0],
+    'DeviceProtection_Yes': [1 if st.checkbox("Device Protection") else 0],
+    'TechSupport_Yes': [1 if st.checkbox("Tech Support") else 0],
+    'StreamingTV_Yes': [1 if st.checkbox("Streaming TV") else 0],
+    'StreamingMovies_Yes': [1 if st.checkbox("Streaming Movies") else 0],
+    'Contract_One year': [1 if st.checkbox("One Year Contract") else 0],
+    'Contract_Two year': [1 if st.checkbox("Two Year Contract") else 0],
+    'PaperlessBilling_Yes': [1 if st.checkbox("Paperless Billing") else 0],
+    'PaymentMethod_Credit card (automatic)': [0],
+    'PaymentMethod_Electronic check': [1 if st.checkbox("Electronic Check") else 0],
+    'PaymentMethod_Mailed check': [1 if st.checkbox("Mailed Check") else 0],
+    'tenure': [tenure],
+    'MonthlyCharges': [monthly_charges],
+    'TotalCharges': [total_charges]
+})
 
-#Making Prediction based on the loaded models and the loaded encoder
-def make_prediction(model_name, model, encoder):
-    df = st.session_state['df']
-    prediction = model.predict(df)
-    probability = model.predict_proba(df)[:, 1].item()
-    st.session_state['prediction'] = prediction
-    st.session_state['probability'] = probability
+prediction = model.predict(user_data)
 
-   # Update history with user inputs and prediction, including timestamp
-    if "history" not in st.session_state:
-        st.session_state["history"] = []
-    new_entry = {"prediction": prediction[0], "probability": probability, "model_name": model_name}
-    st.session_state["history"].append(new_entry)
-    return prediction
-
-def predict_proba():
-    probability = st.session_state.get('probability', None)
-    if probability is not None:
-        st.write(f"The probability of churn is: {probability:.2%}")
-
-def predict():
-    if 'prediction' not in st.session_state:
-        st.session_state['prediction'] = None
-    if 'probability' not in st.session_state:
-        st.session_state['probability'] = None  # Initialize probability key
-    model, encoder, model_name = select_model()
-    with st.form('input feature'):
-        col1, col2 = st.columns(2)
-        with col1:
-            # Add input fields and store values in input_features dictionary
-            st.markdown('##### Demographic Features')
-            gender = st.selectbox('gender', options=['Male', 'Female'], key='gender')
-            SeniorCitizen = st.selectbox('SeniorCitizen', options=['Yes', 'No'], key='SeniorCitizen')
-            Partner = st.selectbox('Partner', options=['Yes', 'No'], key='Partner')
-            Dependents = st.selectbox('Dependents', options=['Yes', 'No'], key='Dependents')
-            st.markdown('##### Service Features')
-            tenure = st.number_input('tenure', min_value=0, max_value=71, step=1, key='tenure')  
-            PhoneService = st.selectbox('PhoneService', options=['Yes', 'No'], key='PhoneService')
-            MultipleLines = st.selectbox('MultipleLines', options=['Yes', 'No'], key='MultipleLines')
-            InternetService = st.selectbox('InternetService', options=['Fiber optic', 'DSL'], key='InternetService')
-            OnlineSecurity = st.selectbox('OnlineSecurity', options=['Yes', 'No'], key='OnlineSecurity')
-        with col2:
-            OnlineBackup = st.selectbox('OnlineBackup', options=['Yes', 'No'], key='OnlineBackup')
-            DeviceProtection = st.selectbox('DeviceProtection', options=['Yes', 'No'], key='DeviceProtection')
-            TechSupport = st.selectbox('TechSupport', options=['Yes', 'No'], key='TechSupport')
-            StreamingTV = st.selectbox('StreamingTV', options=['Yes', 'No'], key='StreamingTV')
-            StreamingMovies = st.selectbox('StreamingMovies', options=['Yes', 'No'], key='StreamingMovies')  
-            st.markdown('##### Payment Features')
-            Contract = st.selectbox('Contract', options=['Month-to-month', 'Two year', 'One year'], key='Contract')
-            PaperlessBilling = st.selectbox('PaperlessBilling', options=['Yes', 'No'], key='PaperlessBilling')
-            PaymentMethod = st.selectbox('PaymentMethod', options=['Electronic check', 'Credit card (automatic)', 'Mailed check', 'Bank transfer (automatic)'], key='PaymentMethod')
-            MonthlyCharges = st.number_input('MonthlyCharges', min_value=0, key='MonthlyCharges')
-            TotalCharges = st.number_input('TotalCharges', min_value=0, key='TotalCharges')
-   
-        input_features = pd.DataFrame({
-            'gender': [gender],
-            'SeniorCitizen': [SeniorCitizen],
-            'Partner': [Partner],
-            'Dependents': [Dependents],
-            'tenure': [tenure],
-            'PhoneService': [PhoneService],
-            'MultipleLines': [MultipleLines],
-            'InternetService': [InternetService],
-            'OnlineSecurity': [OnlineSecurity],
-            'OnlineBackup': [OnlineBackup],
-            'DeviceProtection': [DeviceProtection],
-            'TechSupport': [TechSupport],
-            'StreamingTV': [StreamingTV],
-            'StreamingMovies': [StreamingMovies],
-            'Contract': [Contract],
-            'PaperlessBilling': [PaperlessBilling],
-            'PaymentMethod': [PaymentMethod],
-            'MonthlyCharges': [MonthlyCharges],
-            'TotalCharges': [TotalCharges]
-        })
-        st.session_state['df'] = input_features
-        st.form_submit_button('Predict Churn', on_click=make_prediction, kwargs=dict(model=model, encoder=encoder, model_name=model_name))
-
-# Call the data function directly
-if __name__ == '__main__':
-    st.markdown('## Vodafom Churn Prediction Page')
-    predict()
-prediction = st.session_state['prediction']
-if prediction is not None:
-    if prediction[0] == 1:
-        st.write(f"The customer will churn.")    
-    else:
-        st.write(f"The customer will not churn.")
-    predict_proba()
+st.write(f'The predicted churn status is: {"Churn" if prediction[0] == 1 else "No Churn"}')
