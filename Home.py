@@ -29,10 +29,9 @@ def layout_for_logged_in_users(username):
     - History: See past predictions made.
  
     **User Benefits**
-    - Data-driven Decisions: Make informed decisions backed by data analytics.
-    - Easy Machine Learning: Utilize powerful machine learning algorithms effortlessly.
-    - Live Demo: Watch a demo video to see the app in action.
- 
+    - Data-driven Decisions.
+    - Utilize powerful machine learning algorithms effortlessly.
+                
     **How to run application**
     ```
     # activate virtual environment
@@ -42,11 +41,8 @@ def layout_for_logged_in_users(username):
  
     **Machine Learning Integration**
     - Model Selection: Choose between two advanced models for accurate predictions.
-    - Seamless Integration: Integrate predictions into your workflow with a user-friendly interface.
+    - Seamless Integration: Integrate predictions into  workflow with a user-friendly interface.
     - Probability Estimates: Gain insights into the likelihood of predicted outcomes.
- 
-    **Need Help?**
-    For collaborations contact me at samuel47dribsa@gmail.com.
     """)
 def authenticate(username, password):
     if username in config['credentials']['usernames']:
@@ -79,7 +75,4 @@ else:
 if 'name' in st.session_state:
     layout_for_logged_in_users(st.session_state['name'])
 else:
-    st.success("Enter username and password to use the app.")
-    st.write("Test Accounts:")
-    for username in config['credentials']['usernames']:
-        st.write(f"Username: {username}, Password: {config['credentials']['usernames'][username]['password']}")
+    st.markdown("#### Enter username and password to use the app.")
