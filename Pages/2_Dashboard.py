@@ -12,52 +12,7 @@ st.set_page_config(
     layout='wide'
 )
 
-
-# Function to initialize the database connection
-@st.cache_resource(show_spinner='Connecting to Database ...')
-def initialize_connection():
-    try:
-        if 'conn' in globals():
-            conn.close()  # Close the existing connection if it exists
-    except Exception as e:
-        st.error(f"Error closing connection: {e}")
-
-    try:
-        connection = pyodbc.connect(
-            "DRIVER={SQL Server};SERVER="
-            + st.secrets['SERVER']
-            + ";DATABASE="
-            + st.secrets['DATABASE']
-            + ";UID="
-            + st.secrets['UID']
-            + ";PWD="
-            + st.secrets['PWD']
-        )
-        return connection
-    except Exception as e:
-        st.error(f"Error establishing connection: {e}")
-
-# Function to query the database
-@st.cache_data()
-def query_database(query):
-    try:
-        with conn.cursor() as cur:
-            cur.execute(query)
-            rows = cur.fetchall()
-
-            df = pd.DataFrame.from_records(data=rows, columns=[column[0] for column in cur.description])
-
-        return df
-    except Exception as e:
-        st.error(f"Error executing query: {e}")
-
-# Function to select all features from the database
-def select_all_features():
-    query = "SELECT * FROM LP2_Telco_Churn_first_3000"
-    df = query_database(query)
-    return df
-
-# Function to load CSV data
+# Function to load data
 @st.cache_data()
 def load_csv_data(file_path):
     try:
@@ -195,9 +150,8 @@ def show_kpis(df_train):
     st.markdown(f"### Churned Average Total Charges: ${avg_churned_total_charges:.2f}")
     st.markdown(f"### Non-Churned Average Total Charges: ${avg_non_churned_total_charges:.2f}")
 
-# Initializing connection and loading data
-conn = initialize_connection()
-df_1st = select_all_features()
+# loading data
+df_1st = load_csv_data('./Dataset/df_churn_first_3000.csv')
 df_2nd = load_csv_data('./Dataset/LP2_Telco-churn-second-2000.csv')
 df_train = pd.concat([df_1st, df_2nd], ignore_index=True)
 df_train['SeniorCitizen'] = df_train['SeniorCitizen'].replace({0: 'No', 1: 'Yes'})

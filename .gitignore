@@ -1,2 +1,2 @@
-/.streamlit
-/.virtual_env
+.streamlit/
+virtual_env/
