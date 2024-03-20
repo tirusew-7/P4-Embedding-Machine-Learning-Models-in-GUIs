@@ -90,14 +90,9 @@ else:
         st.write(f"Total Non-Churned Customers: {df_train['Churn'].value_counts()[0]}")
         st.write(f"Churn Rate: {df_train['Churn'].value_counts()[1] / df_train.shape[0] * 100:.2f}%")
         st.write(f"Number of Senior Citizens: {len(df_train[df_train['SeniorCitizen'] == 'Yes'])}")
-    
-        # calculate overall KPIs
-        avg_tenure = df_train['Tenure'].mean()
-        avg_monthly_charges = df_train['MonthlyCharges'].mean()
-        avg_total_charges = df_train['TotalCharges'].mean()
-        total_monthly_charges = df_train['MonthlyCharges'].sum()
-        total_total_charges = df_train['TotalCharges'].sum()
-        
+        st.write(f"Total Monthly Charges: ${df_train['MonthlyCharges'].sum():,.2f}")
+        st.write(f"Total Tenure: {df_train['Tenure'].sum()} months")
+             
         # Function to show the Explore section
     def show_explore(df_train):
         st.markdown("### Exploratory Data Analysis ")
