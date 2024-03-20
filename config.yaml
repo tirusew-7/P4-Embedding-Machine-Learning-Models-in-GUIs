@@ -1,7 +1,12 @@
 credentials:
   usernames:
-    Tirusew:
+    ? ''
+    : email: ''
+      logged_in: false
+      name: ''
+      password: ''
+    TeamRandon:
       email: tirusewcheru@gmail.com
-      logged_in: False # Will be managed automatically
-      name: Tirusew
-      password: 'Chat@2024' # Make sure to enclose in quotes
+      logged_in: false
+      name: TeamRandon
+      password: Azubi
