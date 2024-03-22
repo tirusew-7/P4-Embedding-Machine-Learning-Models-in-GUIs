@@ -1,2 +1,4 @@
 Model-Chosen,gender,SeniorCitizen,Partner,Dependents,tenure,PhoneService,MultipleLines,InternetService,OnlineSecurity,OnlineBackup,DeviceProtection,TechSupport,StreamingTV,StreamingMovies,Contract,PaperlessBilling,PaymentMethod,MonthlyCharges,TotalCharges,Prediction,Probability,Date,Time
-Random Forest,Male,Yes,Yes,Yes,0,Yes,Yes,Fiber optic,Yes,Yes,Yes,Yes,Yes,Yes,Month-to-month,Yes,Electronic check,0,0,Yes,0.68,2024-03-13,16:06:36
+Random Forest,Male,Yes,Yes,Yes,0.0,Yes,Yes,Fiber optic,Yes,Yes,Yes,Yes,Yes,Yes,Month-to-month,Yes,Electronic check,0.0,0.0,Yes,0.68,2024-03-22,11:22:20
+Random Forest,,,,,,,,,,,,,,,,,,,,Yes,0.68,2024-03-22,11:22:21
+Random Forest,,,,,,,,,,,,,,,,,,,,Yes,0.68,2024-03-22,11:22:24

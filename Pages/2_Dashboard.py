@@ -23,15 +23,42 @@ st.set_page_config(
     page_icon='',
     layout='wide'
 )
+df_train = pd.read_csv('Dataset\Cleaned_data.csv')
+# Check if the user is logged in
+if 'name' not in st.session_state:
+    st.sidebar.title("Login/Create Account")
+    username = st.sidebar.text_input("Username")
+    password = st.sidebar.text_input("Password", type="password")
+    if st.sidebar.button("Login"):
+        if authenticate(username, password):
+            st.session_state["name"] = username
+            st.sidebar.success("Login successful.")
+        else:
+            st.sidebar.error("Invalid username or password. Please try again.")
+    if st.sidebar.button("Create Account"):
+        st.sidebar.success("Please enter your full name below to create an account.")
+        new_username = st.sidebar.text_input("New Username")
+        new_password = st.sidebar.text_input("New Password", type="password")
+        if new_username in config['credentials']['usernames']:
+            st.sidebar.error("Username already exists. Please choose a different username.")
+        else:
+            config['credentials']['usernames'][new_username] = {'email': '', 'logged_in': False, 'name': new_username, 'password': new_password}
+            save_config()
+            st.sidebar.success("Account created successfully. You can now log in.")
+    
+    st.warning("You need to log in or create an account to access the data.")
+else:
+    # Authenticate user login
+    username = st.session_state['name']
+    password = st.text_input("Password", type="password")
 
-# Function to load data
-@st.cache_data()
-def load_csv_data(file_path):
-    try:
-        df = pd.read_csv(file_path)
-        return df
-    except Exception as e:
-        st.error(f"Error loading CSV file: {e}")
+    @st.cache
+    def load_csv_data(df_train):
+        try:
+            df = pd.read_excel(df_train)
+            return df
+        except Exception as e:
+            st.error(f"Error loading CSV file: {e}")
 
         # Function to show the About Dashboard section
     def show_about_dashboard():
@@ -123,61 +150,6 @@ def load_csv_data(file_path):
             sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=.5, fmt=".2f")
             ax.set_title('Correlation Heatmap for Numerical Columns')
             st.pyplot(fig)
-# Function to show the Key Performance Indicators section
-def show_kpis(df_train):
-    st.title("Key Performance Indicators")
-
-    # Calculate overall KPIs
-    avg_tenure = df_train['tenure'].mean()
-    avg_monthly_charges = df_train['MonthlyCharges'].mean()
-    avg_total_charges = df_train['TotalCharges'].mean()
-    total_monthly_charges = df_train['MonthlyCharges'].sum()
-    total_total_charges = df_train['TotalCharges'].sum()
-
-    # Calculate churn-specific KPIs
-    churned_df = df_train[df_train['Churn'] == 'Yes']
-    non_churned_df = df_train[df_train['Churn'] == 'No']
-
-    avg_churned_tenure = churned_df['tenure'].mean()
-    avg_non_churned_tenure = non_churned_df['tenure'].mean()
-
-    avg_churned_monthly_charges = churned_df['MonthlyCharges'].mean()
-    avg_non_churned_monthly_charges = non_churned_df['MonthlyCharges'].mean()
-
-    avg_churned_total_charges = churned_df['TotalCharges'].mean()
-    avg_non_churned_total_charges = non_churned_df['TotalCharges'].mean()
-
-    # Display KPIs
-    
-    st.markdown(f"### Average Tenure {avg_tenure:.2f} years")
-    st.markdown(f"### Average Monthly Charges: ${avg_monthly_charges:.2f}")
-    st.markdown(f"### Average Total Charges: ${avg_total_charges:.2f}")
-    st.markdown(f"### Total Monthly Charges: ${total_monthly_charges:.2f}")
-    st.markdown(f"### Total Total Charges: ${total_total_charges:.2f}")
-
-    st.markdown(f"### Churned Average Tenure: {avg_churned_tenure:.2f} years")
-    st.markdown(f"### Non-Churned Average Tenure: {avg_non_churned_tenure:.2f} years")
-
-    st.markdown(f"###  Churned Average Monthly Charges: ${avg_churned_monthly_charges:.2f}")
-    st.markdown(f"### Non-Churned Average Monthly Charges: ${avg_non_churned_monthly_charges:.2f}")
-
-    st.markdown(f"### Churned Average Total Charges: ${avg_churned_total_charges:.2f}")
-    st.markdown(f"### Non-Churned Average Total Charges: ${avg_non_churned_total_charges:.2f}")
-
-# Initializing connection and loading data
-conn = initialize_connection()
-df_1st = select_all_features()
-df_2nd = load_csv_data('./Dataset/LP2_Telco-churn-second-2000.csv')
-df_train = pd.concat([df_1st, df_2nd], ignore_index=True)
-df_train['SeniorCitizen'] = df_train['SeniorCitizen'].replace({0: 'No', 1: 'Yes'})
-boolean_columns = ['Partner', 'Dependents', 'PhoneService', 'MultipleLines',
-                    'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
-                    'TechSupport', 'StreamingTV', 'StreamingMovies', 'PaperlessBilling', 'Churn']
-df_train[boolean_columns] = df_train[boolean_columns].replace({False: 'No', True: 'Yes'})
-df_train['MultipleLines'] = df_train['MultipleLines'].replace('No phone service', 'No')
-df_train['TotalCharges'] = pd.to_numeric(df_train['TotalCharges'], errors='coerce')
-No_internet_service_columns = ['OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
-df_train[No_internet_service_columns] = df_train[No_internet_service_columns].replace('No internet service', 'No')
 
         # Sidebar Navigation
     sidebar_selection = st.sidebar.radio("Select Section", ["About Dashboard", "Explore", "Key Performance Indicators"])

@@ -24,24 +24,6 @@ st.set_page_config(
     layout='wide'
 )
 
-# Function to handle database connection
-@st.cache_resource(show_spinner='Connecting to Database ...')
-def initialize_connection():
-    try:
-        return pyodbc.connect(
-            "DRIVER={SQL Server};SERVER="
-            + st.secrets['SERVER']
-            + ";DATABASE="
-            + st.secrets['DATABASE']
-            + ";UID="
-            + st.secrets['UID']
-            + ";PWD="
-            + st.secrets['PWD']
-        )
-    except Exception as e:
-        st.error(f"Error connecting to the database: {str(e)}")
-        return None
-
 # Check if the user is logged in
 if 'name' not in st.session_state:
     st.sidebar.title("Login/Create Account")
@@ -67,64 +49,53 @@ if 'name' not in st.session_state:
     st.warning("You need to log in or create an account to access the data.")
 
 else:
-    # Establish database connection
-    conn = initialize_connection()
+    # Authenticate user login
+    username = st.session_state['name']
+    password = st.text_input("Password", type="password")
+    if authenticate(username, password):
+        st.success("Login successful.")
+        file_path = '.Dataset\Telco-churn-last-2000.xlsx'
+        # Function to load CSV data
+        @st.cache
+        def load_csv_data(file_path):
+            df = pd.read_csv(file_path)
+            return df
 
-    with st.sidebar:
-        st.title("Logout")
-        if st.button("Logout"):
-            del st.session_state["name"]
-            st.success("You have been successfully logged out.")
+        # Specify the path to your CSV file
+        csv_file_path = './Dataset/LP2_Telco-churn-second-2000.csv'
+        df_2nd = load_csv_data(csv_file_path)
 
-    # Function to query the database
-    @st.cache_data()
-    def query_database(query):
-        with conn.cursor() as cur:
-            cur.execute(query)
-            rows = cur.fetchall()
-            df = pd.DataFrame.from_records(data=rows, columns=[column[0] for column in cur.description])
-        return df
+        # Load data from the database
+        # Placeholder for loading data directly from the CSV file
+        df_1st = pd.read_csv('./Dataset/Cleaned_data.csv')
 
-    # Function to load CSV data
-    @st.cache_data()
-    def load_csv_data(file_path):
-        df = pd.read_csv(file_path)
-        return df
+        # Function to display data based on selected feature type
+        def display_data(selected_feature_type):
+            if selected_feature_type == 'All Features':
+                data = pd.concat([df_1st, df_2nd], ignore_index=True)
+            elif selected_feature_type == 'Numeric Features':
+                data = df_1st.select_dtypes(include='number')
+            elif selected_feature_type == 'Categorical Features':
+                data = df_1st.select_dtypes(exclude='number')
+            elif selected_feature_type == 'Demographic Features':
+                data = df_1st[['Gender', 'SeniorCitizen', 'Partner', 'Dependents']]
+            elif selected_feature_type == 'Service Features':
+                data = df_1st[['Tenure', 'PhoneService', 'MultipleLines', 'InternetService',
+                               'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+                               'TechSupport', 'StreamingTV', 'StreamingMovies']]
+            elif selected_feature_type == 'Cost Features':
+                data = df_1st[['Contract', 'PaperlessBilling', 'PaymentMethod', 'MonthlyCharges', 'TotalCharges']]
+            elif selected_feature_type == 'Target Variable [Churn]':
+                data = df_1st[['Churn']]
+            else:
+                data = pd.DataFrame()  # Default empty DataFrame
 
-    # Specify the path to your CSV file
-    csv_file_path = './Dataset/LP2_Telco-churn-second-2000.csv'
-    df_2nd = load_csv_data(csv_file_path)
+            st.table(data)
 
-    # Load data from the database
-    df_1st = query_database("SELECT * FROM LP2_Telco_Churn_first_3000")
-
-    # Function to display data based on selected feature type
-    def display_data(selected_feature_type):
-        if selected_feature_type == 'All Features':
-            data = pd.concat([df_1st, df_2nd], ignore_index=True)
-        elif selected_feature_type == 'Numeric Features':
-            data = df_1st.select_dtypes(include='number')
-        elif selected_feature_type == 'Categorical Features':
-            data = df_1st.select_dtypes(exclude='number')
-        elif selected_feature_type == 'Demographic Features':
-            data = df_1st[['gender', 'SeniorCitizen', 'Partner', 'Dependents']]
-        elif selected_feature_type == 'Service Features':
-            data = df_1st[['tenure', 'PhoneService', 'MultipleLines', 'InternetService',
-                           'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
-                           'TechSupport', 'StreamingTV', 'StreamingMovies']]
-        elif selected_feature_type == 'Cost Features':
-            data = df_1st[['Contract', 'PaperlessBilling', 'PaymentMethod', 'MonthlyCharges', 'TotalCharges']]
-        elif selected_feature_type == 'Target Variable [Churn]':
-            data = df_1st[['Churn']]
-        else:
-            data = pd.DataFrame()  # Default empty DataFrame
-
-        st.table(data)
-
-    # Main UI layout
-    st.title("Data Page")
-    st.write("This is the Data Page content.")
-    st.subheader('Data used for Training both from Database and CSV')
+        # Main UI layout
+        st.title("Data Page")
+        st.write("This is the Data Page content.")
+        st.subheader('Data used for Training both from Database and CSV')
 
         selected_feature_type = st.selectbox("Please select group of features or Target",
                                              options=['All Features', 'Numeric Features',
@@ -134,4 +105,6 @@ else:
 
         display_data(selected_feature_type)
 
-    st.write(st.session_state)
+        st.write(st.session_state)
+    else:
+        st.error("Invalid password. Please try again.")
